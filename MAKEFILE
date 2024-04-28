@@ -3,8 +3,8 @@ CC=gcc
 CFLAGS=-std=gnu99 -Wall -Wextra -Werror -pedantic -pthread -lrt
 SRC_DIR=.
 BUILD_DIR=.
-ENTRY_FILE=proj2.c
-OUTPUT_FILE=proj2
+ENTRY_FILE=main.c
+OUTPUT_FILE=proj2.out
 
 all: complie
 
