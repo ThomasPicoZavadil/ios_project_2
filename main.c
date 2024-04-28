@@ -16,6 +16,7 @@
 
 int Rcount = 0;
 int Rfinished = 0;
+int event_count = 0;
 
 sem_t *bus_arrival, *bus_depart, *bus_finish;
 
@@ -93,7 +94,8 @@ int shared_memory()
 // Bus process
 void bus(int shmid, int stops, int capacity, int travel_time, int riders_amount)
 {
-    printf("BUS SUCCESS\n");
+    event_count++;
+    printf("%d: BUS: started\n", event_count);
 
     ///////////BUS MEMORY - ATTACH///////////
     struct SharedData *shared_data = (struct SharedData *)shmat(shmid, NULL, 0);
@@ -107,25 +109,29 @@ void bus(int shmid, int stops, int capacity, int travel_time, int riders_amount)
     shared_data->current_amount = 0;
     shared_data->current_stop = 1;
 
-    while (Rfinished <= riders_amount)
+    while (Rfinished < riders_amount)
     {
         // Simulate travel time to the next stop
         sleep(rand_range(1000, travel_time));
         while (shared_data->current_amount < capacity && shared_data->riders_on_stop[shared_data->current_stop] > 0)
         {
-            printf("Bus: Arriving at stop %d\n", shared_data->current_stop);
+            event_count++;
+            printf("%d: BUS: arrived to %d\n", event_count, shared_data->current_stop);
             sem_post(bus_arrival);
         }
         sem_wait(bus_arrival);
-        printf("Bus: Departing from stop %d\n", shared_data->current_stop);
+        event_count++;
+        printf("%d: BUS: leaving %d\n", event_count, shared_data->current_stop);
         shared_data->current_stop++;
         if (shared_data->current_stop > stops)
         {
-            printf("Bus: Arriving at last stop\n");
+            event_count++;
+            printf("%d: Bus: arrived to final\n", event_count);
             while (shared_data->current_amount > 0)
             {
                 sem_post(bus_finish);
             }
+            shared_data->current_stop = 1;
         }
     }
     shmdt(shared_data);
@@ -135,7 +141,8 @@ void bus(int shmid, int stops, int capacity, int travel_time, int riders_amount)
 // Rider process
 void rider(int shmid, int stop_id, int riderID, int breakfest_time)
 {
-    printf("RIDER SUCCESS\n");
+    event_count++;
+    printf("%d: L %d: started\n", event_count, riderID);
 
     ///////////RIDER MEMORY - ATTACH///////////
     struct SharedData *shared_data = (struct SharedData *)shmat(shmid, NULL, 0);
@@ -150,7 +157,8 @@ void rider(int shmid, int stop_id, int riderID, int breakfest_time)
     RiderState state = on_breakfest;
     sleep(rand_range(0, breakfest_time));
     RiderState state = on_stop;
-    printf("Rider %d: Waiting at stop %d\n", riderID, stop_id);
+    event_count++;
+    printf("%d: L %d: arrived to %d\n", event_count, riderID, stop_id);
 
     while (state == on_stop)
     {
@@ -166,6 +174,8 @@ void rider(int shmid, int stop_id, int riderID, int breakfest_time)
     while (state == in_bus)
     {
         sem_wait(bus_finish);
+        event_count++;
+        printf("%d: L %d: going to sky\n", event_count, riderID);
         shared_data->current_amount--;
         sem_post(bus_finish);
     }
